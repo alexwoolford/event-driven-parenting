@@ -1,0 +1,7 @@
+# infinite campus
+ic.username=mylogin
+ic.password=mypassword
+ic.person.id=123456
+
+# kafka
+spring.kafka.bootstrap-servers=cp01.woolford.io:9092,cp02.woolford.io:9092,cp03.woolford.io:9092
