@@ -66,6 +66,8 @@ public class GradeScraper {
             logger.info("Clicked sign in button");
 
         } catch (Exception e) {
+            // Close browser and log error
+            driver.close();
             logger.error("Unable to login: ", e.fillInStackTrace());
         }
 
