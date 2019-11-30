@@ -1,6 +1,5 @@
 package io.woolford;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -38,7 +37,7 @@ public class GradeScraper {
     // check 4x per day at 5 minutes and 37 seconds past the hour
     // this was done to avoid making the request when some other scheduled job puts load on the server
     @Scheduled(cron = "37 5 */6 * * *")
-    private void scrapeGrades() throws JsonProcessingException {
+    private void scrapeGrades() {
 
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
@@ -49,6 +48,7 @@ public class GradeScraper {
         WebDriver driver = new ChromeDriver(options);
 
         // Try to login
+        boolean loggedIn = false;
         try {
             // Open BVSD Infinite Campus login page
             driver.get("https://bvsd.infinitecampus.org/campus/boulder.jsp");
@@ -65,49 +65,52 @@ public class GradeScraper {
             signInBtn.click();
             logger.info("Clicked sign in button");
 
+            // TODO: proper check to see if login was successful
+            loggedIn = true;
+
         } catch (Exception e) {
-            // Close browser and log error
-            driver.close();
+            // Quit browser and log error
+            driver.quit();
             logger.error("Unable to login: ", e.fillInStackTrace());
         }
 
-        // get the grades JSON
-        String responseJson = null;
-        try {
-            // Make a call to the URL that returns grades in JSON format.
-            // This avoids having to parse the HTML.
-            driver.get(icGradesUrl);
-            logger.info("Retrieved grades URL");
+        // If logged in, get grades and publish to Kafka
+        if (loggedIn) {
+            // get the grades JSON
+            String responseJson = null;
+            try {
+                // Make a call to the URL that returns grades in JSON format.
+                // This avoids having to parse the HTML.
+                driver.get(icGradesUrl);
+                logger.info("Retrieved grades URL");
 
-            // Grab the JSON
-            WebElement body = driver.findElement(By.tagName("body"));
-            responseJson = body.getText();
+                // Grab the JSON
+                WebElement body = driver.findElement(By.tagName("body"));
+                responseJson = body.getText();
 
-        } catch (Exception e) {
-            logger.error("Unable to get grades JSON: ", e.fillInStackTrace());
-        } finally {
-            // Close the browser
-            driver.close();
-            logger.info("Closed browser.");
+            } catch (Exception e) {
+                logger.error("Unable to get grades JSON: ", e.fillInStackTrace());
+            } finally {
+                // Quit the browser
+                driver.quit();
+                logger.info("Closed browser.");
+            }
+
+            // Parse the JSON into a list of grades
+            GradeParser gradeParser = new GradeParser();
+            List<GradeRecord> gradeRecordList = new ArrayList<GradeRecord>();
+            try {
+                gradeRecordList = gradeParser.parseGrades(responseJson);
+                logger.info("Parsed grades");
+            } catch (Exception e) {
+                logger.error("Unable to parse grades: ", e.fillInStackTrace());
+            }
+
+            // Publish grades to Kafka
+            for (GradeRecord gradeRecord : gradeRecordList) {
+                kafkaTemplate.send("miles-grades", gradeRecord);
+            }
+            logger.info("Grades published to Kafka");
         }
-
-        // Parse the JSON into a list of grades
-        GradeParser gradeParser = new GradeParser();
-        List<GradeRecord> gradeRecordList = new ArrayList<GradeRecord>();
-
-        try {
-            gradeRecordList = gradeParser.parseGrades(responseJson);
-            logger.info("Parsed grades");
-        } catch (Exception e) {
-            logger.error("Unable to parse grades: ", e.fillInStackTrace());
-        }
-
-        // Publish grades to Kafka
-        for (GradeRecord gradeRecord : gradeRecordList){
-            kafkaTemplate.send("miles-grades", gradeRecord);
-        }
-        logger.info("Grades published to Kafka");
-
     }
-
 }
