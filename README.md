@@ -1,11 +1,7 @@
-# Infinite Campus Grades Scraper
+# event driven parenting
 
-This little Spring app crawls Infinite Campus and writes my son's grades to a Kafka topic. It uses Selenium to automate Chrome, so you'll need to run it on a host that has Chrome and the Chromedriver.
+This project consists of two Spring micro-services:
+1. _ic-grades-scraper_: scrapes grades from Infinite Campus into Kafka.
+2. _playstation-killswitch_: streams grades from Kafka and adds a firewall rule preventing the PS4 from accessing the internet if there's a grade that's not an A or B.
 
-The output messages look something like this:
-
-    {"_id":"123456","courseID":495325,"courseName":"Algebra 1B Honors","sectionID":2408039,"taskID":2851,"taskName":"Final","progressScore":"A","progressPercent":92.27}
-    {"_id":"123456","courseID":495468,"courseName":"Gateway to Computing","sectionID":2408309,"taskID":2851,"taskName":"Final","progressScore":"A","progressPercent":91.59}
-    ...
-
-It's for an *event-driven parenting* use case.
+![event-driven-parenting diagram](event-driven-parenting.png)
