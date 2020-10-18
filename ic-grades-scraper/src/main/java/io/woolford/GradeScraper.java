@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,8 +36,7 @@ public class GradeScraper {
 
     // check 4x per day at 5 minutes and 37 seconds past the hour
     // this was done to avoid making the request when some other scheduled job puts load on the server
-//    @Scheduled(cron = "37 5 */6 * * *")
-    @PostConstruct
+    @Scheduled(cron = "37 5 */6 * * *")
     private void scrapeGrades() {
 
         ChromeOptions options = new ChromeOptions();
